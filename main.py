@@ -1,62 +1,41 @@
-import os
-import logging
 from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
-from yt_dlp import YoutubeDL
-import requests
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from stay_alive import keep_alive
+import yt_dlp
+import os
 
-# ---------------------------- CONFIG ----------------------------
-TOKEN = os.getenv("7841149691:AAGXNDAGkoEo7X4uKpYbwuhLLwMEgvEO19Q")
-DOWNLOAD_DIR = "downloads"
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+TOKEN = "7841149691:AAGXNDAGkoEo7X4uKpYbwuhLLwMEgvEO19Q"  # 🔁 Thay bằng token bot Telegram của bạn
 
-logging.basicConfig(level=logging.INFO)
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("👋 Gửi link video Facebook hoặc TikTok để mình tải nhé!")
 
-# -------------------------- YT-DLP SETUP -------------------------
-def download_video(url, platform):
+def download_video(url):
     ydl_opts = {
-        'format': 'best[ext=mp4]/best',
-        'outtmpl': f'{DOWNLOAD_DIR}/%(title)s.%(ext)s',
+        'outtmpl': 'video.%(ext)s',
+        'format': 'best[ext=mp4]',
+        'noplaylist': True,
         'quiet': True,
     }
-    with YoutubeDL(ydl_opts) as ydl:
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         return ydl.prepare_filename(info)
 
-# ------------------------ MESSAGE HANDLER ------------------------
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text.strip()
+    if 'facebook.com' in url or 'fb.watch' in url or 'tiktok.com' in url:
+        try:
+            await update.message.reply_text("⏳ Đang tải video...")
+            video_path = download_video(url)
+            with open(video_path, 'rb') as f:
+                await update.message.reply_video(f, caption="✅ Tải xong rồi nè!\nMade by Rio Vũ Khiêm")
+            os.remove(video_path)
+        except Exception as e:
+            await update.message.reply_text(f"❌ Lỗi khi tải video: {e}")
+    else:
+        await update.message.reply_text("❓ Gửi link video từ Facebook hoặc TikTok nhé!")
 
-    # Simple platform detection
-    platform = None
-    if any(x in url for x in ["tiktok.com", "douyin.com"]):
-        platform = "TikTok"
-    elif any(x in url for x in ["facebook.com", "fb.watch"]):
-        platform = "Facebook"
-    elif "twitter.com" in url or "x.com" in url:
-        platform = "Twitter"
-    elif any(x in url for x in ["youtube.com", "youtu.be"]):
-        platform = "YouTube"
+app = ApplicationBuilder().token(TOKEN).build()
+app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    if not platform:
-        await update.message.reply_text("❌ Không nhận diện được nền tảng từ liên kết bạn gửi.")
-        return
-
-    await update.message.reply_text(f"⏳ Đang tải video từ {platform}...")
-    try:
-        video_path = download_video(url, platform)
-        await update.message.reply_video(video=open(video_path, 'rb'))
-        os.remove(video_path)  # Dọn file sau khi gửi
-    except Exception as e:
-        logging.error(f"Lỗi tải video: {e}")
-        await update.message.reply_text(f"❌ Lỗi khi tải video: {e}")
-
-# ---------------------------- MAIN APP ----------------------------
-if __name__ == '__main__':
-    if not TOKEN:
-        raise ValueError("Bạn chưa cung cấp TELEGRAM_API_TOKEN trong biến môi trường!")
-
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
-    print("🤖 Bot đang chạy... made by Rio Vũ Khiêm")
-    app.run_polling()
+app.run_polling()
