@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # API Token của bạn
-BOT_TOKEN = "7527429868:AAGcBlm_obLae3TwWnPpDyzlcnhy9UYv6QA"
+BOT_TOKEN = "7841149691:AAGXNDAGkoEo7X4uKpYbwuhLLwMEgvEO19Q"
 
 # Hàm tải video
 async def download_video(url):
