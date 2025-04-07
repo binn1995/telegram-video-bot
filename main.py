@@ -1,41 +1,56 @@
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
-from stay_alive import keep_alive
-import yt_dlp
 import os
+import logging
+import yt_dlp
+from telegram import Update
+from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 
-TOKEN = "7841149691:AAGXNDAGkoEo7X4uKpYbwuhLLwMEgvEO19Q"  # 🔁 Thay bằng token bot Telegram của bạn
+# Khởi tạo log
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 Gửi link video Facebook hoặc TikTok để mình tải nhé!")
+# API Token của bạn
+BOT_TOKEN = "7527429868:AAGcBlm_obLae3TwWnPpDyzlcnhy9UYv6QA"
 
-def download_video(url):
+# Hàm tải video
+async def download_video(url):
     ydl_opts = {
         'outtmpl': 'video.%(ext)s',
-        'format': 'best[ext=mp4]',
-        'noplaylist': True,
+        'format': 'best[ext=mp4]/best',
         'quiet': True,
     }
+
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         return ydl.prepare_filename(info)
 
+# Hàm xử lý tin nhắn
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    url = update.message.text.strip()
-    if 'facebook.com' in url or 'fb.watch' in url or 'tiktok.com' in url:
+    if update.message and update.message.text:
+        url = update.message.text.strip()
         try:
-            await update.message.reply_text("⏳ Đang tải video...")
-            video_path = download_video(url)
-            with open(video_path, 'rb') as f:
-                await update.message.reply_video(f, caption="✅ Tải xong rồi nè!\nMade by Rio Vũ Khiêm")
-            os.remove(video_path)
+            # Xóa tin nhắn chứa link của người dùng
+            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
+
+            # Gửi tin nhắn "Đang tải video..."
+            loading_message = await update.message.reply_text("⏬ Đang tải video...")
+
+            filepath = await download_video(url)
+            await update.message.reply_video(video=open(filepath, 'rb'), caption="✅ Tải thành công!\nmade by Rio Vũ Khiêm")
+            os.remove(filepath)
+
+            # Xóa tin nhắn "Đang tải video..."
+            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=loading_message.message_id)
+
         except Exception as e:
-            await update.message.reply_text(f"❌ Lỗi khi tải video: {e}")
-    else:
-        await update.message.reply_text("❓ Gửi link video từ Facebook hoặc TikTok nhé!")
+            logger.error(str(e))
+            await update.message.reply_text("❌ Lỗi khi tải video. Đảm bảo link đúng hoặc thử lại sau.")
 
-app = ApplicationBuilder().token(TOKEN).build()
-app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+# Hàm khởi động bot
+def main():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+    print("✅ Bot đang chạy...")
+    app.run_polling()
 
-app.run_polling()
+if __name__ == '__main__':
+    main()
