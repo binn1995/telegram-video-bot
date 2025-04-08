@@ -19,9 +19,13 @@ async def download_video(url):
         'quiet': True,
     }
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-        return ydl.prepare_filename(info), info.get('webpage_url')
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            return ydl.prepare_filename(info), info.get('webpage_url')
+    except Exception as e:
+        logger.error(f"Lỗi khi tải video: {e}")
+        return None, None
 
 # Hàm xử lý tin nhắn
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -36,16 +40,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             filepath, webpage_url = await download_video(url)
 
-            # Gửi video
-            await update.message.reply_video(video=open(filepath, 'rb'), caption="✅ Tải thành công!\nmade by Rio Vũ Khiêm")
-            os.remove(filepath)
+            if filepath and webpage_url:
+                # Gửi video
+                await update.message.reply_video(video=open(filepath, 'rb'), caption="✅ Tải thành công!\nmade by Rio Vũ Khiêm")
+                os.remove(filepath)
 
-            # Tạo nút "Link gốc" với callback_data
-            keyboard = [[InlineKeyboardButton("Link gốc", callback_data=webpage_url)]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
+                # Tạo nút "Link gốc" với callback_data
+                keyboard = [[InlineKeyboardButton("Link gốc", callback_data=webpage_url)]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
 
-            # Gửi tin nhắn chứa nút "Link gốc"
-            await update.message.reply_text(reply_markup=reply_markup)
+                # Gửi tin nhắn chứa nút "Link gốc"
+                await update.message.reply_text(reply_markup=reply_markup)
+            else:
+                await update.message.reply_text("❌ Lỗi khi tải video. Đảm bảo link đúng hoặc thử lại sau.")
 
             # Xóa tin nhắn "Đang tải video..."
             await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=loading_message.message_id)
@@ -64,7 +71,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
-    app.add_handler(CallbackQueryHandler(button)) # Thêm handler cho button
+    app.add_handler(CallbackQueryHandler(button))
     print("✅ Bot đang chạy...")
     app.run_polling()
 
