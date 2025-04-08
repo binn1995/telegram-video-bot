@@ -19,13 +19,9 @@ async def download_video(url):
         'quiet': True,
     }
 
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            return ydl.prepare_filename(info), info.get('webpage_url')
-    except Exception as e:
-        logger.error(f"Lỗi khi tải video: {e}")
-        return None, None
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        return ydl.prepare_filename(info), info.get('webpage_url')
 
 # Hàm xử lý tin nhắn
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -40,19 +36,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             filepath, webpage_url = await download_video(url)
 
-            if filepath and webpage_url:
-                # Gửi video
-                await update.message.reply_video(video=open(filepath, 'rb'), caption="✅ Tải thành công!\nmade by Rio Vũ Khiêm")
-                os.remove(filepath)
+            # Gửi video
+            await update.message.reply_video(video=open(filepath, 'rb'), caption="✅ Tải thành công!\nmade by Rio Vũ Khiêm")
+            os.remove(filepath)
 
-                # Tạo nút "Origin link" với callback_data
-                keyboard = [[InlineKeyboardButton("Origin link", callback_data=webpage_url)]]
-                reply_markup = InlineKeyboardMarkup(keyboard)
+            # Tạo nút "Origin link"
+            keyboard = [[InlineKeyboardButton("Origin link", callback_data=webpage_url)]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
 
-                # Gửi tin nhắn chứa nút "Origin link"
-                await update.message.reply_text(reply_markup=reply_markup)
-            else:
-                await update.message.reply_text("❌ Lỗi khi tải video. Đảm bảo link đúng hoặc thử lại sau.")
+            # Gửi tin nhắn chứa nút "Origin link"
+            await update.message.reply_text("Nhấn vào nút để xem link gốc:", reply_markup=reply_markup)
 
             # Xóa tin nhắn "Đang tải video..."
             await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=loading_message.message_id)
