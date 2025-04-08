@@ -44,9 +44,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard = [[InlineKeyboardButton("Origin link", callback_data=webpage_url)]]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
-            # Gửi tin nhắn chứa nút "Origin link"
-            await update.message.reply_text("xem link gốc:", reply_markup=reply_markup)
-
             # Xóa tin nhắn "Đang tải video..."
             await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=loading_message.message_id)
 
