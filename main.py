@@ -1,8 +1,8 @@
 import os
 import logging
 import yt_dlp
-from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 
 # Khởi tạo log
 logging.basicConfig(level=logging.INFO)
@@ -21,7 +21,7 @@ async def download_video(url):
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
-        return ydl.prepare_filename(info), info.get('webpage_url')  # Thêm trả về webpage_url
+        return ydl.prepare_filename(info), info.get('webpage_url')
 
 # Hàm xử lý tin nhắn
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -40,8 +40,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_video(video=open(filepath, 'rb'), caption="✅ Tải thành công!\nmade by Rio Vũ Khiêm")
             os.remove(filepath)
 
-            # Gửi tin nhắn chứa link gốc
-            await update.message.reply_text(f"Link gốc: {webpage_url}")
+            # Tạo nút "Origin link"
+            keyboard = [[InlineKeyboardButton("Origin link", callback_data=webpage_url)]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+            # Gửi tin nhắn chứa nút "Origin link"
+            await update.message.reply_text("Nhấn vào nút để xem link gốc:", reply_markup=reply_markup)
 
             # Xóa tin nhắn "Đang tải video..."
             await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=loading_message.message_id)
@@ -50,10 +54,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.error(str(e))
             await update.message.reply_text("❌ Lỗi khi tải video. Đảm bảo link đúng hoặc thử lại sau.")
 
+# Hàm xử lý khi người dùng nhấn nút "Origin link"
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await query.message.reply_text(f"Link gốc: {query.data}")
+
 # Hàm khởi động bot
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+    app.add_handler(CallbackQueryHandler(button))
     print("✅ Bot đang chạy...")
     app.run_polling()
 
