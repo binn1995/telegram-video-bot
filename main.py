@@ -21,7 +21,7 @@ async def download_video(url):
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
-        return ydl.prepare_filename(info)
+        return ydl.prepare_filename(info), info.get('webpage_url')
 
 # Hàm xử lý tin nhắn
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -34,8 +34,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Gửi tin nhắn "Đang tải video..."
             loading_message = await update.message.reply_text("⏬ Đang tải video...")
 
-            filepath = await download_video(url)
-            await update.message.reply_video(video=open(filepath, 'rb'), caption="✅ Tải thành công!\nmade by Rio Vũ Khiêm")
+            filepath, webpage_url = await download_video(url)
+            caption = f"✅ Tải thành công!\nLink gốc: {webpage_url}\nmade by Rio Vũ Khiêm"
+            await update.message.reply_video(video=open(filepath, 'rb'), caption=caption)
             os.remove(filepath)
 
             # Xóa tin nhắn "Đang tải video..."
