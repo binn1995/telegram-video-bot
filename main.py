@@ -40,7 +40,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_video(video=open(filepath, 'rb'), caption="✅ Tải thành công!\nmade by Rio Vũ Khiêm")
             os.remove(filepath)
 
-            # Tạo nút "Link gốc"
+            # Tạo nút "Link gốc" với callback_data
             keyboard = [[InlineKeyboardButton("Link gốc", callback_data=webpage_url)]]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -64,7 +64,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
-    app.add_handler(CallbackQueryHandler(button))
+    app.add_handler(CallbackQueryHandler(button)) # Thêm handler cho button
     print("✅ Bot đang chạy...")
     app.run_polling()
 
