@@ -58,7 +58,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Hàm khởi động bot
 def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = ApplicationBuilder().token(7841149691:AAGXNDAGkoEo7X4uKpYbwuhLLwMEgvEO19Q).build()
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     app.add_handler(CallbackQueryHandler(button))
     print("✅ Bot đang chạy...")
